@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>History</title>
+    <script>
+        async function loadHistory() {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                window.location.href = "/auth";
+                return;
+            }
+
+            const res = await fetch("/api/history", {
+                headers: { "Authorization": "Bearer " + token }
+            });
+
+            const data = await res.json();
+            const table = document.getElementById("history");
+
+            data.forEach(r => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${r.industry}</td>
+                    <td>${r.risk_score}</td>
+                    <td>${r.security_score}</td>
+                    <td>${r.decision}</td>
+                    <td>${r.created_at}</td>
+                `;
+                table.appendChild(row);
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", loadHistory);
+    </script>
+</head>
+<body>
+
+<h2>Underwriting History</h2>
+
+<a href="/">← Back</a>
+
+<table border="1">
+    <tr>
+        <th>Industry</th>
+        <th>Risk</th>
+        <th>Security</th>
+        <th>Status</th>
+        <th>Date</th>
+    </tr>
+    <tbody id="history"></tbody>
+</table>
+
+</body>
+</html>

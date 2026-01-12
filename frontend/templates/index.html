@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AegisUnderwrite</title>
+</head>
+<body>
+
+<h2>Cyber Insurance Underwriting</h2>
+
+<form method="post" action="/underwrite">
+
+    <label>Industry</label><br>
+    <select name="industry" required>
+        <option value="">-- Select Industry --</option>
+        <option value="healthcare">Healthcare</option>
+        <option value="finance">Finance / Banking</option>
+        <option value="insurance">Insurance</option>
+        <option value="technology">Technology / SaaS</option>
+        <option value="ecommerce">E-Commerce</option>
+        <option value="manufacturing">Manufacturing</option>
+        <option value="education">Education</option>
+        <option value="energy">Energy / Utilities</option>
+        <option value="government">Government / Public Sector</option>
+        <option value="telecom">Telecommunications</option>
+        <option value="logistics">Logistics / Supply Chain</option>
+        <option value="retail">Retail</option>
+        <option value="media">Media & Entertainment</option>
+        <option value="other">Other</option>
+    </select>
+    <br><br>
+
+    <label>Employee Count</label><br>
+    <input type="number" name="employee_count" min="1" required>
+    <br><br>
+
+    <label>Data Sensitivity</label><br>
+    <select name="data_sensitivity" required>
+        <option value="low">Low (Public / Non-critical)</option>
+        <option value="medium">Medium (Internal / Business)</option>
+        <option value="high">High (PII / Financial / Health)</option>
+    </select>
+    <br><br>
+
+    <label>Previous Cyber Incidents</label><br>
+    <input type="number" name="previous_incidents" min="0" required>
+    <br><br>
+
+    <button type="submit">Run Underwriting</button>
+
+</form>
+
+<br><br>
+
+<form method="post" action="/logout">
+    <button type="submit">Logout</button>
+</form>
+
+</body>
+</html>
