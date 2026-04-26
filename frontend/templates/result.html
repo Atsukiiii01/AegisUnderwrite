@@ -1,62 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Underwriting Result</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
+<html>
+<head><title>Scan Results</title><link rel="stylesheet" href="/static/style.css"></head>
 <body>
-
-<h1>Underwriting Result</h1>
-
-<p><strong>Risk Score:</strong>
-    {{ decision.risk_score if decision.risk_score is not none else "N/A" }}
-</p>
-
-<p><strong>Security Score:</strong>
-    {{ decision.security_score if decision.security_score is not none else "N/A" }}
-</p>
-
-<p><strong>Status:</strong> {{ decision.status }}</p>
-
-<p><strong>Risk Tier:</strong>
-    {{ decision.risk_tier if decision.risk_tier is not none else "N/A" }}
-</p>
-
-<p><strong>Annual Premium:</strong>
-    {% if decision.status == "APPROVED" %}
-        ₹{{ decision.annual_premium_inr }}
-    {% else %}
-        N/A
-    {% endif %}
-</p>
-
-<p><strong>Coverage Limit:</strong>
-    {% if decision.status == "APPROVED" %}
-        ₹{{ decision.coverage_limit_inr }}
-    {% else %}
-        N/A
-    {% endif %}
-</p>
-
-<hr>
-
-{% if decision.status == "APPROVED" %}
-<form action="/underwrite/pdf" method="post">
-    <!-- ✅ THIS IS THE FIX -->
-    <input
-        type="hidden"
-        name="decision_json"
-        value='{{ decision | tojson }}'
-    >
-    <button type="submit">📄 Download PDF Report</button>
-</form>
-{% else %}
-<p><em>PDF report not available for rejected applications.</em></p>
-{% endif %}
-
-<br>
-<a href="/">← Back to Dashboard</a>
-
+<div class="card">
+    <h2>OSINT Scan Results</h2>
+    <p><strong>Risk Score:</strong> {{ risk_score }} | <strong>Security Score:</strong> {{ security_score }}</p>
+    <h3 class="{{ decision.status.lower() }}">{{ decision.status }}</h3>
+    <p>Premium: ₹{{ decision.annual_premium_inr }} | Coverage: ₹{{ decision.coverage_limit_inr }}</p>
+    
+    <h4>Security Findings</h4>
+    <ul>{% for r in security_explanation %}<li>{{ r }}</li>{% endfor %}</ul>
+    
+    <h4>Risk Factors</h4>
+    <ul>{% for r in risk_explanation %}<li>{{ r }}</li>{% endfor %}</ul>
+    
+    <br><a href="/"><button>Scan Another Target</button></a>
+</div>
 </body>
 </html>

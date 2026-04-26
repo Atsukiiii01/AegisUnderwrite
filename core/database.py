@@ -1,26 +1,40 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+# core/database.py
+import sqlite3
+import json
+from datetime import datetime
 
-DATABASE_URL = "sqlite:///./aegis.db"
+class AegisDB:
+    def __init__(self, db_path="aegis.db"):
+        self.db_path = db_path
+        self._init_db()
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
+    def _init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS audits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    target_url TEXT NOT NULL,
+                    industry TEXT,
+                    risk_score REAL,
+                    grade TEXT,
+                    findings TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.commit()
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+    def save_audit(self, target, industry, score, grade, findings):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO audits (target_url, industry, risk_score, grade, findings, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (target, industry, score, grade, json.dumps(findings), datetime.now()))
+            conn.commit()
 
-Base = declarative_base()
-
-# ✅ THIS WAS MISSING
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    def get_history(self, target):
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM audits WHERE target_url = ? ORDER BY timestamp DESC', (target,))
+            return cursor.fetchall()

@@ -7,3 +7,7 @@ reportlab
 python-jose
 passlib[bcrypt]
 python-multipart
+python-dotenv
+dnspython
+requests
+argon2-cffi

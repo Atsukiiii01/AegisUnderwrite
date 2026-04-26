@@ -1,49 +1,36 @@
-class SecurityPostureEngine:
-    def __init__(
-        self,
-        mfa_enabled: bool,
-        encryption_enabled: bool,
-        regular_patching: bool,
-        backups_enabled: bool,
-        employee_training: bool,
-        incident_response_plan: bool
-    ):
-        self.mfa_enabled = mfa_enabled
-        self.encryption_enabled = encryption_enabled
-        self.regular_patching = regular_patching
-        self.backups_enabled = backups_enabled
-        self.employee_training = employee_training
-        self.incident_response_plan = incident_response_plan
+import socket
 
-    def calculate_security_score(self) -> int:
-        score = 0
+class PostureScanner:
+    def __init__(self, target_host):
+        self.target = target_host
+        # Critical ports that represent insurance-level liability
+        self.critical_ports = {
+            21: "FTP",
+            22: "SSH",
+            445: "SMB (WannaCry Risk)",
+            3389: "RDP (Ransomware Entry)",
+            5432: "PostgreSQL",
+            8080: "HTTP-Alt"
+        }
 
-        if self.mfa_enabled:
-            score += 20
+    def scan(self):
+        findings = []
+        print(f"[*] Auditing technical posture for: {self.target}")
+        
+        for port, service in self.critical_ports.items():
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(1.5)
+                    result = s.connect_ex((self.target, port))
+                    if result == 0:
+                        findings.append({"port": port, "service": service})
+            except Exception as e:
+                continue
+        return findings
 
-        if self.encryption_enabled:
-            score += 20
-
-        if self.regular_patching:
-            score += 15
-
-        if self.backups_enabled:
-            score += 15
-
-        if self.employee_training:
-            score += 15
-
-        if self.incident_response_plan:
-            score += 15
-
-        return min(score, 100)
-
-    def security_level(self) -> str:
-        score = self.calculate_security_score()
-
-        if score >= 80:
-            return "STRONG"
-        elif score >= 50:
-            return "MODERATE"
-        else:
-            return "WEAK"
+    def check_ssl(self):
+        try:
+            with socket.create_connection((self.target, 443), timeout=2):
+                return True
+        except:
+            return False

@@ -1,63 +1,38 @@
 class RiskAssessmentEngine:
-    def __init__(
-        self,
-        industry: str,
-        employee_count: int,
-        data_sensitivity: str,
-        cloud_usage: bool,
-        previous_incidents: int
-    ):
+    def __init__(self, industry, employee_count, data_sensitivity, previous_incidents, tech_findings=None, has_ssl=True):
         self.industry = industry.lower()
         self.employee_count = employee_count
         self.data_sensitivity = data_sensitivity.lower()
-        self.cloud_usage = cloud_usage
         self.previous_incidents = previous_incidents
+        self.tech_findings = tech_findings or []
+        self.has_ssl = has_ssl
+        self.score = 0
+        self.reasons = []
 
-    def calculate_risk_score(self) -> int:
-        score = 0
+    def calculate_risk_score(self):
+        # 1. Base Score (Foundational Risk)
+        base_scores = {"healthcare": 25, "finance": 30, "government": 35}
+        current_risk = base_scores.get(self.industry, 15)
+        self.reasons.append(f"Base Industry Risk ({self.industry}): {current_risk}")
+        
+        # 2. Technical Penalties (The Truth Layer)
+        tech_penalty = 0
+        if not self.has_ssl:
+            tech_penalty += 15
+            self.reasons.append("CRITICAL: No SSL/HTTPS detected: +15")
+        
+        port_weights = {3389: 30, 445: 25, 21: 15} # Weighted by exploitability
+        for finding in self.tech_findings:
+            penalty = port_weights.get(finding['port'], 10)
+            tech_penalty += penalty
+            self.reasons.append(f"CRITICAL PORT OPEN: {finding['service']} ({finding['port']}): +{penalty}")
 
-        # Industry risk
-        industry_risk = {
-            "finance": 25,
-            "healthcare": 25,
-            "technology": 20,
-            "retail": 15,
-            "education": 10,
-            "manufacturing": 15
-        }
-        score += industry_risk.get(self.industry, 10)
+        # 3. Compounding Multipliers (Scaling Risk)
+        emp_multiplier = 1.0 if self.employee_count < 50 else (1.2 if self.employee_count <= 200 else 1.5)
+        incident_multiplier = 1.0 + (self.previous_incidents * 0.25) 
 
-        # Company size risk
-        if self.employee_count > 1000:
-            score += 20
-        elif self.employee_count > 200:
-            score += 15
-        else:
-            score += 10
-
-        # Data sensitivity risk
-        if self.data_sensitivity == "high":
-            score += 25
-        elif self.data_sensitivity == "medium":
-            score += 15
-        else:
-            score += 5
-
-        # Cloud exposure risk
-        if self.cloud_usage:
-            score += 10
-
-        # Previous incidents
-        score += min(self.previous_incidents * 5, 20)
-
-        return min(score, 100)
-
-    def risk_level(self) -> str:
-        score = self.calculate_risk_score()
-
-        if score >= 70:
-            return "HIGH"
-        elif score >= 40:
-            return "MEDIUM"
-        else:
-            return "LOW"
+        # Final Formula: (Base + Tech) * Scale * History
+        final_score = (current_risk + tech_penalty) * emp_multiplier * incident_multiplier
+        
+        self.score = round(min(final_score, 100), 2)
+        return self.score

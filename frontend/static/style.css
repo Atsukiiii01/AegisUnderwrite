@@ -1,39 +1,6 @@
-body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: #e5e7eb;
-}
-
-.container {
-    width: 400px;
-    margin: 80px auto;
-    padding: 20px;
-    background: #020617;
-    border-radius: 8px;
-}
-
-input, select, button {
-    width: 100%;
-    margin: 10px 0;
-    padding: 10px;
-}
-
-button {
-    background: #2563eb;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-
-.subtitle {
-    font-size: 0.9em;
-    color: #9ca3af;
-}
-
-.result-box {
-    margin-top: 15px;
-}
-
-.warning {
-    color: #facc15;
-}
+body { font-family: Arial, sans-serif; background: #0f172a; color: #e5e7eb; padding: 20px; }
+.container, .card { max-width: 600px; margin: auto; background: #020617; padding: 30px; border-radius: 8px; }
+input, select, button { width: 100%; margin: 10px 0; padding: 10px; box-sizing: border-box; }
+button { background: #2563eb; color: white; border: none; cursor: pointer; font-weight: bold; }
+button:hover { background: #1d4ed8; }
+.approved { color: #22c55e; } .rejected { color: #ef4444; }
