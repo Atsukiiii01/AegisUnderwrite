@@ -8,25 +8,33 @@ import (
 	"os"
 
 	"github.com/Atsukiiii01/AegisUnderwrite/core"
+	"github.com/Atsukiiii01/AegisUnderwrite/database"
 	"github.com/Atsukiiii01/AegisUnderwrite/providers"
 )
 
 func main() {
 	log.Println("Starting AegisUnderwrite Engine...")
 
-	engine := core.NewEngine()
+	// 1. Initialize the Persistence Layer
+	dbManager, err := database.NewManager("aegis_audit.db")
+	if err != nil {
+		log.Fatalf("FATAL: Could not initialize database: %v", err)
+	}
 
-	// Register all modules
+	// 2. Boot Engine and Inject Database
+	engine := core.NewEngine(dbManager)
+
+	// Register modules
 	engine.Register(providers.NewMockBreachProvider())
 	engine.Register(providers.NewIdentityXONProvider())
 	engine.Register(providers.NewIdentityPremiumProvider())
 	engine.Register(providers.NewDomainProvider())
-	engine.Register(providers.NewShodanProvider()) // New Infrastructure Provider
+	engine.Register(providers.NewShodanProvider())
 
 	ctx := context.Background()
 
-	// Test with an IP address to verify routing
-	target := "8.8.8.8"
+	// Test it on your test email
+	target := "test@gmail.com"
 
 	log.Printf("Executing concurrent analysis against: %s\n", target)
 	report := engine.Analyze(ctx, target)
