@@ -16,17 +16,18 @@ func main() {
 
 	engine := core.NewEngine()
 
-	// Register modules
+	// Register modules explicitly
 	engine.Register(providers.NewMockBreachProvider())
-	engine.Register(providers.NewIdentityProvider()) // The new live provider
+	engine.Register(providers.NewIdentityXONProvider())     // Free
+	engine.Register(providers.NewIdentityPremiumProvider()) // Premium
+	engine.Register(providers.NewDomainProvider())
 
 	ctx := context.Background()
-	target := "target@example.com" // Provide a real email to test
+	target := "test@gmail.com"
 
 	log.Printf("Executing concurrent analysis against: %s\n", target)
 	report := engine.Analyze(ctx, target)
 
-	// Output clean JSON
 	output, _ := json.MarshalIndent(report, "", "  ")
 	fmt.Println("\n--- RESULTS ---")
 	os.Stdout.Write(output)
