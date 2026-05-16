@@ -1,3 +1,5 @@
 .env
 .DS_Store
 AegisUnderwrite
+*.db
+aegis_audit.db
