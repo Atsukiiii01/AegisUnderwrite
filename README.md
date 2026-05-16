@@ -2,7 +2,6 @@
 
 ![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go)
 ![Release](https://img.shields.io/badge/Release-v1.0.0-blue?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-gray?style=flat-square)
 
 **A concurrent, fault-tolerant OSINT underwriting engine designed for automated attack surface quantification.**
 
