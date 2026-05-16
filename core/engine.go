@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/Atsukiiii01/AegisUnderwrite/providers"
+	"github.com/Atsukiiii01/AegisUnderwrite/utils"
 )
 
 type Engine struct {
@@ -24,13 +25,32 @@ func (e *Engine) Register(p providers.Provider) {
 }
 
 func (e *Engine) Analyze(ctx context.Context, target string) []providers.ProviderResult {
+	// 1. Inspect the target archetype
+	targetType := string(utils.IdentifyTarget(target))
+	log.Printf("[ROUTER] Identified target '%s' as type: %s\n", target, targetType)
+
 	var wg sync.WaitGroup
 	results := make(chan providers.ProviderResult, len(e.providers))
+	activeWorkers := 0
 
 	for _, p := range e.providers {
+		// 2. Check if the provider supports this specific type
+		supported := false
+		for _, t := range p.SupportedTypes() {
+			if t == targetType || t == "ANY" {
+				supported = true
+				break
+			}
+		}
+
+		if !supported {
+			// Silently skip irrelevant modules without breaking concurrency
+			continue
+		}
+
+		activeWorkers++
 		wg.Add(1)
 
-		// Spin up a concurrent goroutine for each provider
 		go func(provider providers.Provider) {
 			defer wg.Done()
 
@@ -43,7 +63,6 @@ func (e *Engine) Analyze(ctx context.Context, target string) []providers.Provide
 		}(p)
 	}
 
-	// Wait for all goroutines to finish, then close the channel
 	wg.Wait()
 	close(results)
 

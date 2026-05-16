@@ -16,14 +16,17 @@ func main() {
 
 	engine := core.NewEngine()
 
-	// Register modules explicitly
+	// Register all modules
 	engine.Register(providers.NewMockBreachProvider())
-	engine.Register(providers.NewIdentityXONProvider())     // Free
-	engine.Register(providers.NewIdentityPremiumProvider()) // Premium
+	engine.Register(providers.NewIdentityXONProvider())
+	engine.Register(providers.NewIdentityPremiumProvider())
 	engine.Register(providers.NewDomainProvider())
+	engine.Register(providers.NewShodanProvider()) // New Infrastructure Provider
 
 	ctx := context.Background()
-	target := "test@gmail.com"
+
+	// Test with an IP address to verify routing
+	target := "8.8.8.8"
 
 	log.Printf("Executing concurrent analysis against: %s\n", target)
 	report := engine.Analyze(ctx, target)
