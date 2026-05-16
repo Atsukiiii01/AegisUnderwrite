@@ -14,6 +14,8 @@ type IdentityPremiumProvider struct {
 	APIKey string
 }
 
+func (i *IdentityPremiumProvider) SupportedTypes() []string { return []string{"EMAIL"} }
+
 func NewIdentityPremiumProvider() *IdentityPremiumProvider {
 	apiKey := os.Getenv("AEGIS_PREMIUM_IDENTITY_KEY")
 

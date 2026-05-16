@@ -18,6 +18,8 @@ type DomainProvider struct {
 	Client *http.Client
 }
 
+func (d *DomainProvider) SupportedTypes() []string { return []string{"DOMAIN", "EMAIL"} }
+
 func NewDomainProvider() *DomainProvider {
 	return &DomainProvider{
 		Client: &http.Client{

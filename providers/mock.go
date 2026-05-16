@@ -7,6 +7,8 @@ import (
 
 type MockBreachProvider struct{}
 
+func (m *MockBreachProvider) SupportedTypes() []string { return []string{"ANY"} }
+
 func NewMockBreachProvider() *MockBreachProvider {
 	return &MockBreachProvider{}
 }

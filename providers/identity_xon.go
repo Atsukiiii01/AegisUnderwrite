@@ -12,6 +12,8 @@ type IdentityXONProvider struct {
 	Client *http.Client
 }
 
+func (i *IdentityXONProvider) SupportedTypes() []string { return []string{"EMAIL"} }
+
 func NewIdentityXONProvider() *IdentityXONProvider {
 	return &IdentityXONProvider{
 		Client: &http.Client{
