@@ -10,12 +10,19 @@ import (
 	"github.com/Atsukiiii01/AegisUnderwrite/utils"
 )
 
-type Engine struct {
-	providers []providers.Provider
-	db        *database.Manager // The Engine now owns a database connection
+type AssessmentReport struct {
+	Target      string                     `json:"target"`
+	TargetType  string                     `json:"target_type"`
+	OverallRisk int                        `json:"overall_risk"`
+	RiskLevel   string                     `json:"risk_level"`
+	Findings    []providers.ProviderResult `json:"findings"`
 }
 
-// Inject the database manager upon initialization
+type Engine struct {
+	providers []providers.Provider
+	db        *database.Manager
+}
+
 func NewEngine(dbManager *database.Manager) *Engine {
 	return &Engine{
 		providers: make([]providers.Provider, 0),
@@ -28,7 +35,7 @@ func (e *Engine) Register(p providers.Provider) {
 	log.Printf("[INIT] Registered Provider: %s", p.Name())
 }
 
-func (e *Engine) Analyze(ctx context.Context, target string) []providers.ProviderResult {
+func (e *Engine) Analyze(ctx context.Context, target string) AssessmentReport {
 	targetType := string(utils.IdentifyTarget(target))
 	log.Printf("[ROUTER] Identified target '%s' as type: %s\n", target, targetType)
 
@@ -65,22 +72,56 @@ func (e *Engine) Analyze(ctx context.Context, target string) []providers.Provide
 	wg.Wait()
 	close(results)
 
-	var finalReport []providers.ProviderResult
+	var findings []providers.ProviderResult
+	maxScore := 0
+	totalScore := 0
+	validProviders := 0
 
-	// Process the results sequentially as they come off the channel
 	for r := range results {
-		finalReport = append(finalReport, r)
+		findings = append(findings, r)
 
-		// Persist to the database
+		if r.RiskScore > maxScore {
+			maxScore = r.RiskScore
+		}
+		totalScore += r.RiskScore
+		validProviders++
+
 		if e.db != nil {
 			err := e.db.SaveAssessment(r.Target, r.ProviderName, r.RawData, r.RiskScore)
 			if err != nil {
 				log.Printf("[ERROR] Failed to save %s audit to database: %v", r.ProviderName, err)
-			} else {
-				log.Printf("[DB] Persisted audit record for %s via %s", r.Target, r.ProviderName)
 			}
 		}
 	}
 
-	return finalReport
+	// The Underwriter Algorithm:
+	// Base risk equals the absolute highest threat found.
+	// Compounding factor: add 10% of the remaining combined scores.
+	finalRisk := maxScore
+	if validProviders > 1 {
+		remainder := totalScore - maxScore
+		finalRisk += int(float64(remainder) * 0.1)
+	}
+	if finalRisk > 100 {
+		finalRisk = 100
+	}
+
+	level := "LOW"
+	if finalRisk >= 30 {
+		level = "MEDIUM"
+	}
+	if finalRisk >= 70 {
+		level = "HIGH"
+	}
+	if finalRisk >= 90 {
+		level = "CRITICAL"
+	}
+
+	return AssessmentReport{
+		Target:      target,
+		TargetType:  targetType,
+		OverallRisk: finalRisk,
+		RiskLevel:   level,
+		Findings:    findings,
+	}
 }

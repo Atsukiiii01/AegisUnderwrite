@@ -12,8 +12,6 @@ type IdentityXONProvider struct {
 	Client *http.Client
 }
 
-func (i *IdentityXONProvider) SupportedTypes() []string { return []string{"EMAIL"} }
-
 func NewIdentityXONProvider() *IdentityXONProvider {
 	return &IdentityXONProvider{
 		Client: &http.Client{
@@ -24,6 +22,11 @@ func NewIdentityXONProvider() *IdentityXONProvider {
 
 func (i *IdentityXONProvider) Name() string {
 	return "identity_xposedornot_free"
+}
+
+// Ensure the router only feeds emails to this module
+func (i *IdentityXONProvider) SupportedTypes() []string {
+	return []string{"EMAIL"}
 }
 
 func (i *IdentityXONProvider) Fetch(ctx context.Context, target string) (ProviderResult, error) {
@@ -75,8 +78,15 @@ func (i *IdentityXONProvider) Fetch(ctx context.Context, target string) (Provide
 		}
 	}
 
+	// --- THE LOGIC FIX IS HERE ---
+	// We dynamically assign the status string based on the actual breach count.
+	status := "clean"
+	if breachCount > 0 {
+		status = "breached"
+	}
+
 	rawData := map[string]interface{}{
-		"status":   "breached",
+		"status":   status,
 		"breaches": breachCount,
 		"sources":  sources,
 	}
