@@ -1,0 +1,59 @@
+name: Build and Release
+
+# 1. The Trigger: This pipeline ONLY runs when you push a tag starting with 'v'
+on:
+  push:
+    tags:
+      - 'v*'
+
+# 2. Permissions: Give the pipeline authority to write to the Releases page
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Cross-Compile & Publish
+    runs-on: ubuntu-latest
+    
+    # 3. The Matrix: We tell GitHub to loop through these OS and Architecture combinations
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+        # Exclude Windows ARM as it is rarely used for server deployments
+        exclude:
+          - goos: windows
+            goarch: arm64
+            
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go Environment
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          check-latest: true
+
+      - name: Compile Native Binaries
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          # Dynamically name the binary based on the current matrix loop
+          BINARY_NAME=aegis-${{ matrix.goos }}-${{ matrix.goarch }}
+          
+          # Append .exe if we are compiling for Windows
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME=${BINARY_NAME}.exe
+          fi
+          
+          echo "Building $BINARY_NAME..."
+          go build -o $BINARY_NAME main.go
+
+      - name: Generate GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aegis-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
