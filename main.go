@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -14,20 +15,29 @@ import (
 )
 
 func main() {
-	// 1. Define Subcommands
+	// 0. Pre-flight check: Mute logs immediately before any subsystem initializes
+	for _, arg := range os.Args {
+		if arg == "-silent" {
+			log.SetOutput(io.Discard)
+			break
+		}
+	}
+
+	// 1. Define Subcommands and Flags
 	scanCmd := flag.NewFlagSet("scan", flag.ExitOnError)
 	scanTarget := scanCmd.String("target", "", "Target to analyze (Email, IP, Domain)")
+	scanSilent := scanCmd.Bool("silent", false, "Suppress logs and output pure JSON for piping")
 
 	historyCmd := flag.NewFlagSet("history", flag.ExitOnError)
 	historyTarget := historyCmd.String("target", "", "Target to retrieve history for")
 
 	if len(os.Args) < 2 {
 		fmt.Println("Expected 'scan' or 'history' subcommands.")
-		fmt.Println("Usage: ./aegis scan -target <target>")
+		fmt.Println("Usage: ./aegis scan -target <target> [-silent]")
 		os.Exit(1)
 	}
 
-	// 2. Initialize Database
+	// 2. Initialize Database (Will now be silent if flag is present)
 	dbManager, err := database.NewManager("aegis_audit.db")
 	if err != nil {
 		log.Fatalf("FATAL: Could not initialize database: %v", err)
@@ -42,7 +52,7 @@ func main() {
 			scanCmd.PrintDefaults()
 			os.Exit(1)
 		}
-		executeScan(dbManager, *scanTarget)
+		executeScan(dbManager, *scanTarget, *scanSilent)
 
 	case "history":
 		historyCmd.Parse(os.Args[2:])
@@ -59,8 +69,11 @@ func main() {
 	}
 }
 
-func executeScan(db *database.Manager, target string) {
-	log.Printf("[SYSTEM] Booting AegisUnderwrite Engine against: %s", target)
+func executeScan(db *database.Manager, target string, silent bool) {
+	if !silent {
+		log.Printf("[SYSTEM] Booting AegisUnderwrite Engine against: %s", target)
+	}
+
 	engine := core.NewEngine(db)
 
 	engine.Register(providers.NewMockBreachProvider())
@@ -71,11 +84,16 @@ func executeScan(db *database.Manager, target string) {
 	engine.Register(providers.NewShodanProvider())
 
 	report := engine.Analyze(context.Background(), target)
-
 	output, _ := json.MarshalIndent(report, "", "  ")
-	fmt.Println("\n--- FINAL REPORT ---")
-	os.Stdout.Write(output)
-	fmt.Println("\n--------------------")
+
+	if silent {
+		os.Stdout.Write(output)
+		fmt.Println()
+	} else {
+		fmt.Println("\n--- FINAL REPORT ---")
+		os.Stdout.Write(output)
+		fmt.Println("\n--------------------")
+	}
 }
 
 func executeHistory(db *database.Manager, target string) {
