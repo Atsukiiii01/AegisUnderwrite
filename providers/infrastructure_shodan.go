@@ -15,13 +15,11 @@ type ShodanProvider struct {
 }
 
 func NewShodanProvider() *ShodanProvider {
-	apiKey := os.Getenv("SHODAN_API_KEY")
-
 	return &ShodanProvider{
 		Client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		APIKey: apiKey,
+		APIKey: os.Getenv("SHODAN_API_KEY"),
 	}
 }
 
@@ -29,7 +27,6 @@ func (s *ShodanProvider) Name() string {
 	return "infrastructure_shodan"
 }
 
-// Ensure the router only feeds IP addresses to this module
 func (s *ShodanProvider) SupportedTypes() []string {
 	return []string{"IP"}
 }
@@ -46,8 +43,7 @@ func (s *ShodanProvider) Fetch(ctx context.Context, target string) (ProviderResu
 		return ProviderResult{}, fmt.Errorf("failed to build request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", "AegisUnderwrite-Engine/2.0")
-	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "AegisUnderwrite-Engine/1.2")
 
 	resp, err := s.Client.Do(req)
 	if err != nil {
@@ -56,49 +52,53 @@ func (s *ShodanProvider) Fetch(ctx context.Context, target string) (ProviderResu
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
+		// 404 just means Shodan hasn't scanned this IP. It is not an error, it's a clean result.
 		return ProviderResult{
 			ProviderName: s.Name(),
 			Target:       target,
-			RawData:      map[string]interface{}{"status": "not_indexed_or_offline"},
+			RawData:      map[string]interface{}{"status": "not_in_database", "open_ports": []int{}, "cves": []string{}},
 			RiskScore:    0,
 		}, nil
 	}
 
 	if resp.StatusCode != 200 {
-		return ProviderResult{}, fmt.Errorf("Shodan API returned status: %d", resp.StatusCode)
+		return ProviderResult{}, fmt.Errorf("API returned unexpected status: %d", resp.StatusCode)
 	}
 
-	var shodanData map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&shodanData); err != nil {
+	// Unmarshal only the fields we care about for the underwriter model
+	var data struct {
+		Org   string   `json:"org"`
+		Ports []int    `json:"ports"`
+		Vulns []string `json:"vulns"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return ProviderResult{}, fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
-	var ports []interface{}
-	if p, ok := shodanData["ports"].([]interface{}); ok {
-		ports = p
+	// --- UPGRADED RISK LOGIC ---
+	// Base penalty: 5 points per open port.
+	// Critical penalty: 35 points per known CVE.
+	risk := len(data.Ports) * 5
+
+	if len(data.Vulns) > 0 {
+		risk += len(data.Vulns) * 35
 	}
 
-	var vulnerabilities []interface{}
-	if vulns, ok := shodanData["vulns"].([]interface{}); ok {
-		vulnerabilities = vulns
+	if risk > 100 {
+		risk = 100
 	}
 
-	orgName := "Unknown"
-	if org, ok := shodanData["org"].(string); ok {
-		orgName = org
+	// Ensure we don't output 'null' for empty CVE slices in the final JSON
+	cves := data.Vulns
+	if cves == nil {
+		cves = []string{}
 	}
 
 	rawData := map[string]interface{}{
-		"organization": orgName,
-		"open_ports":   ports,
-		"cves":         vulnerabilities,
-	}
-
-	// Calculate infrastructure risk:
-	// Open ports represent surface area (10 pts each). CVEs represent confirmed holes (50 pts each).
-	risk := (len(ports) * 10) + (len(vulnerabilities) * 50)
-	if risk > 100 {
-		risk = 100
+		"organization": data.Org,
+		"open_ports":   data.Ports,
+		"cves":         cves,
 	}
 
 	return ProviderResult{
