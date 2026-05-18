@@ -81,6 +81,7 @@ func executeScan(db *database.Manager, target string, silent bool) {
 	engine.Register(providers.NewIdentityPremiumProvider())
 	engine.Register(providers.NewDomainProvider())
 	engine.Register(providers.NewDomainSubfinderProvider())
+	engine.Register(providers.NewDomainDNSSecurityProvider())
 	engine.Register(providers.NewShodanProvider())
 
 	report := engine.Analyze(context.Background(), target)
